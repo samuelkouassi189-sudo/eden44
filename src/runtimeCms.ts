@@ -89,31 +89,32 @@ export function useRuntimeCms() {
 
     const refreshLocal = () => {
       if (!mounted) return;
-      setCms(readRuntimeCms());
+      const localData = readRuntimeCms();
+      setCms((prev) => (JSON.stringify(prev) === JSON.stringify(localData) ? prev : localData));
     };
 
     const refreshRemote = async () => {
       if (!mounted) return;
-      const remote = await fetchRemoteCmsState<RuntimeCmsState>();
+      const remote = await fetchRemoteCmsState<RuntimeCmsState>(3500);
+      if (!mounted) return;
       if (remote) {
-        window.localStorage.setItem(CMS_STORAGE_KEY, JSON.stringify(remote));
+        const serialized = JSON.stringify(remote);
+        if (window.localStorage.getItem(CMS_STORAGE_KEY) !== serialized) {
+          window.localStorage.setItem(CMS_STORAGE_KEY, serialized);
+        }
         setCms(remote);
-      } else {
-        refreshLocal();
       }
     };
 
     void refreshRemote();
 
     window.addEventListener("storage", refreshLocal);
-    window.addEventListener("focus", refreshLocal);
     window.addEventListener(CMS_UPDATED_EVENT, refreshLocal as EventListener);
     const unsubscribe = hasSupabaseConfig ? subscribeToRemoteCms(() => void refreshRemote()) : () => undefined;
 
     return () => {
       mounted = false;
       window.removeEventListener("storage", refreshLocal);
-      window.removeEventListener("focus", refreshLocal);
       window.removeEventListener(CMS_UPDATED_EVENT, refreshLocal as EventListener);
       unsubscribe();
     };

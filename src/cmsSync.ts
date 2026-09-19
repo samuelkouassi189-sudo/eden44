@@ -131,22 +131,33 @@ export type UploadFailure = {
 
 export type UploadOutcome = UploadSuccess | UploadFailure;
 
-export async function fetchRemoteCmsState<T>() {
+export async function fetchRemoteCmsState<T>(timeoutMs = 4000): Promise<T | null> {
   const client = supabase;
   if (!hasSupabaseConfig || !client) return null;
 
-  const { data, error } = await client
-    .from("site_state")
-    .select("data")
-    .eq("id", SITE_STATE_ID)
-    .maybeSingle();
+  try {
+    const fetchPromise = client
+      .from("site_state")
+      .select("data")
+      .eq("id", SITE_STATE_ID)
+      .maybeSingle();
 
-  if (error) {
-    console.error("Erreur Supabase fetchRemoteCmsState:", error.message);
+    const timeoutPromise = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+      setTimeout(() => resolve({ data: null, error: { message: "Délai d'attente Supabase dépassé (timeout 4s)" } }), timeoutMs),
+    );
+
+    const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
+    if (error) {
+      console.warn("Supabase fetchRemoteCmsState info:", error.message);
+      return null;
+    }
+
+    return (data?.data as T | null) ?? null;
+  } catch (err) {
+    console.warn("Erreur fetchRemoteCmsState:", err);
     return null;
   }
-
-  return (data?.data as T | null) ?? null;
 }
 
 export async function saveRemoteCmsState<T extends SharedCmsPayload>(payload: T) {

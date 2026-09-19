@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useInView } from "framer-motion";
 import {
   ArrowRight,
@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { HashRouter, Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { cn } from "./utils/cn";
-import AdminPanel from "./AdminPanel";
+const AdminPanel = lazy(() => import("./AdminPanel"));
 import { BrandLogo } from "./BrandLogo";
 import { getPublishedCollection, getRuntimeMedia, useRuntimeCms } from "./runtimeCms";
 import {
@@ -136,7 +136,7 @@ function SiteApp() {
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 1800);
+    const timer = window.setTimeout(() => setLoading(false), 200);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -273,7 +273,23 @@ function AnimatedRoutes() {
             </PageLayout>
           }
         />
-        <Route path="/admin" element={<AdminPanel />} />
+        <Route
+          path="/admin"
+          element={
+            <Suspense
+              fallback={
+                <div className="flex min-h-screen items-center justify-center bg-[#030712] text-white">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                    <p className="text-sm font-medium text-slate-400">Chargement de l'administration...</p>
+                  </div>
+                </div>
+              }
+            >
+              <AdminPanel />
+            </Suspense>
+          }
+        />
         <Route
           path="*"
           element={
@@ -290,10 +306,10 @@ function AnimatedRoutes() {
 function PageLayout({ children }: { children: ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -24 }}
-      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
       className="relative"
     >
       <main className="pt-20 sm:pt-24">{children}</main>
@@ -505,7 +521,7 @@ function HeroVideo({ src, poster }: { src: string; poster?: string }) {
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="none"
         poster={poster}
       >
         <source src={src} type="video/mp4" />
@@ -542,10 +558,10 @@ function SectionTitle({
 function Reveal({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 36 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.16 }}
-      transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+      viewport={{ once: true, amount: 0.08 }}
+      transition={{ duration: 0.45, ease: "easeOut" }}
       className={className}
     >
       {children}
